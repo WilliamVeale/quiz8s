@@ -41,6 +41,30 @@ quiz8s --list
 quiz8s --offline
 ```
 
+## Dynamic Question Generation
+
+Generate fresh questions each time using Claude to analyze your manifests:
+
+```bash
+# Generate 5 new questions (default)
+quiz8s --generate
+
+# Generate 10 questions focused on TLS/certificates
+quiz8s --generate -n 10 --focus TLS
+
+# Generate hard questions about ingress/networking
+quiz8s --generate --focus Ingress -d hard
+
+# Focus areas: TLS, Flux, Ingress, Secrets, Helm, Solr, ZooKeeper, Security, Monitoring
+quiz8s --generate --focus Secrets
+```
+
+Dynamic generation analyzes your actual manifests and creates questions about:
+- Configuration choices it finds interesting or unusual
+- How specific components in your cluster work together
+- Potential issues or trade-offs in your setup
+- Troubleshooting scenarios specific to your deployment
+
 ## During the Quiz
 
 - Type your answer in natural language

@@ -11,9 +11,10 @@ from rich.table import Table
 from rich.markdown import Markdown
 from rich import box
 
-from .parser import scan_manifests
+from .parser import scan_manifests, ClusterArchitecture
 from .questions import QuestionGenerator, QuestionCategory, Question
 from .judge import judge_answer, judge_answer_offline, Verdict, JudgmentResult
+from .generator import generate_questions
 
 console = Console()
 
@@ -263,6 +264,16 @@ def main():
         action="store_true",
         help="Use offline keyword-based judging (no Claude)"
     )
+    parser.add_argument(
+        "-g", "--generate",
+        action="store_true",
+        help="Generate fresh questions using Claude (instead of using pre-built questions)"
+    )
+    parser.add_argument(
+        "-f", "--focus",
+        type=str,
+        help="Focus area for generated questions (e.g., 'TLS', 'Flux', 'Ingress', 'Secrets')"
+    )
 
     args = parser.parse_args()
 
@@ -287,28 +298,55 @@ def main():
     # Interactive mode
     display_welcome()
 
-    # Select category
-    console.print()
-    categories = display_categories(generator)
+    # Dynamic generation mode
+    if args.generate:
+        focus_msg = f" focused on [yellow]{args.focus}[/yellow]" if args.focus else ""
+        console.print(f"\n[cyan]Generating {args.num_questions} fresh questions{focus_msg}...[/cyan]")
 
-    choice = Prompt.ask(
-        "\nSelect a category",
-        choices=list(categories.keys()),
-        default="a"
-    )
+        with console.status("[bold blue]Claude is analyzing your manifests and creating questions...[/bold blue]"):
+            try:
+                questions = generate_questions(
+                    arch,
+                    count=args.num_questions,
+                    focus_area=args.focus,
+                    difficulty=args.difficulty
+                )
+            except Exception as e:
+                console.print(f"[red]Error generating questions: {e}[/red]")
+                console.print("[yellow]Falling back to pre-built questions...[/yellow]")
+                questions = generator.get_questions(
+                    difficulty=args.difficulty,
+                    count=args.num_questions
+                )
 
-    selected_category = categories.get(choice.lower())
+        if not questions:
+            console.print("[red]Failed to generate questions. Try again or use pre-built questions.[/red]")
+            sys.exit(1)
 
-    # Get questions
-    questions = generator.get_questions(
-        category=selected_category,
-        difficulty=args.difficulty,
-        count=args.num_questions
-    )
+        console.print(f"[green]Generated {len(questions)} questions![/green]")
+    else:
+        # Pre-built questions mode
+        console.print()
+        categories = display_categories(generator)
 
-    if not questions:
-        console.print("[red]No questions available for the selected criteria.[/red]")
-        sys.exit(1)
+        choice = Prompt.ask(
+            "\nSelect a category",
+            choices=list(categories.keys()),
+            default="a"
+        )
+
+        selected_category = categories.get(choice.lower())
+
+        # Get questions
+        questions = generator.get_questions(
+            category=selected_category,
+            difficulty=args.difficulty,
+            count=args.num_questions
+        )
+
+        if not questions:
+            console.print("[red]No questions available for the selected criteria.[/red]")
+            sys.exit(1)
 
     console.print(f"\n[green]Starting quiz with {len(questions)} questions...[/green]")
 
