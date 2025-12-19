@@ -1,0 +1,19 @@
+[project]
+name = "quiz8s"
+version = "0.1.0"
+description = "A Kubernetes quiz app that tests understanding of GitOps deployments"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "rich>=13.0",
+    "claude-agent-sdk>=0.0.20",
+    "anyio>=4.0",
+]
+
+[project.scripts]
+quiz8s = "quiz8s.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
